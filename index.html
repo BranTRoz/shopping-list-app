@@ -59,6 +59,7 @@ main{padding:4px 0 40px}
 .empty{margin:28px 18px;padding:22px;border-radius:16px;background:var(--card);font-size:18px;font-weight:600;text-align:center}
 .foot{display:flex;justify-content:center;padding:18px}
 .ghost{border:1.5px solid var(--line);background:transparent;border-radius:12px;min-height:44px;padding:0 16px;cursor:pointer;font-weight:600;color:var(--mute)}
+.ghost[aria-pressed=true]{border-color:var(--ink);color:var(--ink)}
 .ghost.arm{border-color:#b3261e;color:#b3261e}
 .pill{border:1.5px solid var(--ink);background:transparent;border-radius:999px;min-height:40px;padding:0 16px;font-weight:700;font-size:15px;cursor:pointer}
 .go{border:0;border-radius:12px;background:var(--gold);color:var(--goldInk);font-weight:700;min-height:44px;padding:0 20px;cursor:pointer;font-size:16px}
@@ -84,15 +85,15 @@ const LIST=[["Produce",[["w-bananas","Bananas",''],["w-grapes","Grapes",''],["w-
  ["Frozen",[["w-bao-buns","Bao buns",''],["w-peas","Peas",''],["w-turkey-meatballs","Turkey meatballs",'']]],
  ["Household and paper",[["w-foil","Foil",''],["w-foil-pans-8-8","Foil pans, 8×8",''],["w-bounty-paper-towels","Bounty paper towels",''],["w-toilet-paper","Toilet paper",''],["w-garbage-bags","Garbage bags",''],["w-windex","Windex",'']]]];
 const KEY='weekly-list-v2';
-let st={sel:[],done:[],hide:false,extra:[],mode:null};
+let st={sel:[],done:[],hide:false,extra:[],removed:[],mode:null,edit:false};
 try{st=Object.assign(st,JSON.parse(localStorage.getItem(KEY)||'{}'))}catch(e){}
-let sel=new Set(st.sel),done=new Set(st.done),armT=null,armR=null;
+let sel=new Set(st.sel),done=new Set(st.done),removed=new Set(st.removed||[]),armT=null,armR=null;st.edit=false;
 if(!st.mode)st.mode=sel.size?'shop':'admin';
-const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({sel:[...sel],done:[...done],hide:st.hide,extra:st.extra,mode:st.mode}))}catch(e){}};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({sel:[...sel],done:[...done],hide:st.hide,extra:st.extra,removed:[...removed],mode:st.mode}))}catch(e){}};
 const CK='<svg viewBox="0 0 24 24" fill="none" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const head=document.getElementById('head'),main=document.getElementById('main');
-const sections=()=>[...LIST,['Extras',st.extra.map(x=>[x.id,x.name,'',false,true])]];
+const sections=()=>[...LIST.map(([n,items])=>[n,items.filter(i=>!removed.has(i[0]))]),['Extras',st.extra.map(x=>[x.id,x.name,'',false,true])]];
 const addForm=()=>`<form class="add" id="add"><input id="newItem" placeholder="Paper plates" aria-label="Add an item" autocomplete="off"><button type="submit">Add</button></form>`;
 const row=(id,nm,on,cls,mine)=>`<div style="display:flex"><button class="row${on?' '+cls:''}" data-id="${id}" aria-pressed="${on}"><span class="ck" aria-hidden="true">${CK}</span><span><span class="nm">${esc(nm)}</span></span><span></span></button>${mine?`<button class="del" data-del="${id}" aria-label="Remove ${esc(nm)}">×</button>`:''}</div>`;
 function renderShop(){
@@ -116,17 +117,19 @@ function renderAdmin(){
  let html='';
  for(const [name,items] of sections()){
   html+=`<div class="sec"><h2>${name}</h2><span>${items.filter(i=>sel.has(i[0])).length}/${items.length}</span></div>`;
-  html+=items.map(i=>row(i[0],i[1],sel.has(i[0]),'on',i[4])).join('');
+  html+=items.map(i=>row(i[0],i[1],sel.has(i[0]),'on',st.edit||i[4])).join('');
   if(name==='Extras')html+=addForm();
  }
- html+=`<div class="foot"><button class="ghost" id="clearSel">Clear all picks</button></div>`;
+ html+=`<div class="foot"><button class="ghost" id="editBtn" aria-pressed="${st.edit}">${st.edit?'Done editing':'Edit list'}</button>${removed.size?'<button class="ghost" id="restore">Restore removed items</button>':''}<button class="ghost" id="clearSel">Clear all picks</button></div>`;
  main.className='admin';main.innerHTML=html;
 }
 function render(){st.mode==='admin'?renderAdmin():renderShop()}
 document.addEventListener('click',e=>{
- const m=e.target.closest('[data-mode]');if(m){st.mode=m.dataset.mode;save();render();window.scrollTo(0,0);return}
+ const m=e.target.closest('[data-mode]');if(m){st.mode=m.dataset.mode;st.edit=false;save();render();window.scrollTo(0,0);return}
  if(e.target.closest('#hide')){st.hide=!st.hide;save();render();return}
- const d=e.target.closest('[data-del]');if(d){const id=d.dataset.del;st.extra=st.extra.filter(x=>x.id!==id);sel.delete(id);done.delete(id);save();render();return}
+ const d=e.target.closest('[data-del]');if(d){const id=d.dataset.del;if(st.extra.some(x=>x.id===id))st.extra=st.extra.filter(x=>x.id!==id);else removed.add(id);sel.delete(id);done.delete(id);save();render();return}
+ if(e.target.closest('#editBtn')){st.edit=!st.edit;render();return}
+ if(e.target.closest('#restore')){removed.clear();save();render();return}
  const r=e.target.closest('.row');if(r){const id=r.dataset.id;
   if(st.mode==='admin'){if(sel.has(id)){sel.delete(id);done.delete(id)}else sel.add(id)}
   else{done.has(id)?done.delete(id):done.add(id)}
