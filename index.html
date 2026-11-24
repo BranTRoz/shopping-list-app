@@ -94,7 +94,7 @@ const CK='<svg viewBox="0 0 24 24" fill="none" stroke-width="3.4" stroke-linecap
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const head=document.getElementById('head'),main=document.getElementById('main');
 const sections=()=>[...LIST.map(([n,items])=>[n,[...items.filter(i=>!removed.has(i[0])),...(st.custom||[]).filter(c=>c.sec===n).map(c=>[c.id,c.name,'',false,false])]]),['Extras',st.extra.map(x=>[x.id,x.name,'',false,true])]];
-const addForm=()=>`<form class="add" id="add"><input id="newItem" placeholder="Paper plates" aria-label="Add an item" autocomplete="off"><button type="submit">Add</button><select id="newSec" aria-label="Aisle (optional)"><option value="">Extras, this week only (or pick an aisle to keep it)</option>${LIST.map(([n])=>`<option value="${n}">${n}</option>`).join('')}</select></form>`;
+const addForm=()=>`<form class="add" id="add"><input id="newItem" placeholder="Paper plates" aria-label="Add an item" autocomplete="off"><button type="submit">Add</button><select id="newSec" aria-label="Aisle (optional)"><option value="">Aisle: Extras (this week only)</option>${LIST.map(([n])=>`<option value="${n}">${n}</option>`).join('')}</select></form>`;
 const row=(id,nm,on,cls,mine)=>`<div style="display:flex"><button class="row${on?' '+cls:''}" data-id="${id}" aria-pressed="${on}"><span class="ck" aria-hidden="true">${CK}</span><span><span class="nm">${esc(nm)}</span></span><span></span></button>${mine?`<button class="del" data-del="${id}" aria-label="Remove ${esc(nm)}">×</button>`:''}</div>`;
 function renderShop(){
  const mine=sections().flatMap(s=>s[1]).filter(i=>sel.has(i[0])),n=mine.filter(i=>done.has(i[0])).length,left=mine.length-n;
